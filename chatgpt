@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Clone</title>
+    <style>
+        /* CSS for Styling the App */
+
+        /* Basic Reset and Font */
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f7f7f8;
+        }
+
+        /* Main Container for the Chat App */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 800px;
+            margin: 0 auto;
+            border-left: 1px solid #d1d5db;
+            border-right: 1px solid #d1d5db;
+        }
+
+        /* Header */
+        .chat-header {
+            padding: 1rem;
+            background-color: #ffffff;
+            border-bottom: 1px solid #d1d5db;
+            text-align: center;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        /* Chat Window where messages appear */
+        .chat-window {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem; /* Space between messages */
+        }
+
+        /* Style for individual messages (both user and bot) */
+        .message {
+            display: flex;
+            align-items: flex-start; /* Align items to the top */
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+
+        /* Avatar for messages */
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 2px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            flex-shrink: 0; /* Prevents avatar from shrinking */
+        }
+
+        /* User message specific styles */
+        .user-message {
+            align-self: flex-end;
+            background-color: #f7f7f8; /* Subtle background */
+        }
+        .user-message .avatar {
+            background-color: #5436da; /* User avatar color */
+        }
+        .user-message .message-content {
+            order: -1; /* Puts content before avatar */
+        }
+
+        /* Bot message specific styles */
+        .bot-message {
+            align-self: flex-start;
+            background-color: #ffffff;
+        }
+        .bot-message .avatar {
+            background-color: #10a37f; /* Bot avatar color */
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none; /* Hidden by default */
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+        }
+        .typing-indicator .avatar {
+            background-color: #10a37f;
+        }
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background-color: #9ca3af;
+            border-radius: 50%;
+            animation: blink 1.4s infinite both;
+        }
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0%, 60%, 100% {
+                opacity: 0.2;
+                transform: scale(0.8);
+            }
+            30% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+
+        /* Input form at the bottom */
+        .chat-input-form {
+            display: flex;
+            padding: 1rem;
+            background-color: #ffffff;
+            border-top: 1px solid #d1d5db;
+        }
+        .chat-input {
+            flex-grow: 1;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            outline: none;
+        }
+        .chat-input:focus {
+            border-color: #5436da;
+            box-shadow: 0 0 0 3px rgba(84, 54, 218, 0.1);
+        }
+        .send-button {
+            margin-left: 1rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background-color: #5436da;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        .send-button:hover {
+            background-color: #4b2fc4;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            ChatGPT Clone
+        </div>
+        <div class="chat-window" id="chatWindow">
+            <!-- Messages will be added here by JavaScript -->
+            <div class="message bot-message">
+                <div class="avatar">AI</div>
+                <div class="message-content">Hello! I am a simulated AI. How can I help you today?</div>
+            </div>
+        </div>
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="avatar">AI</div>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        <form class="chat-input-form" id="chatForm">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Type your message here..." autocomplete="off" required>
+            <button type="submit" class="send-button">Send</button>
+        </form>
+    </div>
+
+    <script>
+        // JavaScript for App Logic
+
+        // Get references to our HTML elements
+        const chatForm = document.getElementById('chatForm');
+        const chatInput = document.getElementById('chatInput');
+        const chatWindow = document.getElementById('chatWindow');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        // Function to create a new message element
+        function createMessage(content, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', `${sender}-message`);
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.classList.add('avatar');
+            avatarDiv.textContent = sender === 'user' ? 'U' : 'AI';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('message-content');
+            contentDiv.textContent = content;
+
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+
+            return messageDiv;
+        }
+
+        // Function to simulate an AI response
+        function getBotResponse(userMessage) {
+            // This is a simple simulation. In a real app, you would call an API here.
+            const responses = [
+                "That's an interesting question. Tell me more.",
+                "I understand. As a simulated AI, I can only provide pre-written answers.",
+                "Why do you think that is?",
+                "I'm processing what you said. My response is limited.",
+                "Could you rephrase that? My programming is still basic.",
+                "That's a great point. I will add it to my learning data (if I were a real AI)."
+            ];
+            // Return a random response
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
+        // Handle form submission
+        chatForm.addEventListener('submit', function(event) {
+            // Prevent the form from submitting and reloading the page
+            event.preventDefault();
+
+            const userMessage = chatInput.value.trim();
+            if (userMessage === '') return; // Don't send empty messages
+
+            // 1. Display user's message
+            const userMsgElement = createMessage(userMessage, 'user');
+            chatWindow.appendChild(userMsgElement);
+
+            // Clear the input field
+            chatInput.value = '';
+
+            // Scroll to the latest message
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            // 2. Show the "typing..." indicator
+            typingIndicator.style.display = 'flex';
+            chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to show indicator
+
+            // 3. Simulate a network delay and then show the bot's response
+            setTimeout(() => {
+                // Hide the typing indicator
+                typingIndicator.style.display = 'none';
+
+                // Get a simulated response
+                const botResponse = getBotResponse(userMessage);
+
+                // Display the bot's message
+                const botMsgElement = createMessage(botResponse, 'bot');
+                chatWindow.appendChild(botMsgElement);
+
+                // Scroll to the latest message
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+            }, 1500); // 1.5 second delay
+        });
+    </script>
+
+</body>
+</html>
