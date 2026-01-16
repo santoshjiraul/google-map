@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMNI-VIEW // SURVEILLANCE TOOL</title>
+    <style>
+        :root {
+            --bg-color: #050a10;
+            --panel-bg: #0f1c2e;
+            --text-main: #a0c0e0;
+            --accent-cyan: #00f3ff;
+            --accent-red: #ff2a2a;
+            --accent-green: #00ff66;
+            --border-color: #1e3a5f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--accent-cyan);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            color: var(--accent-cyan);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .status {
+            font-size: 0.8rem;
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        /* Login Screen */
+        #login-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 1s ease;
+        }
+
+        .login-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        .login-box::after {
+            content: "";
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(45deg, var(--accent-cyan), transparent, var(--accent-green));
+            z-index: -1;
+            animation: borderGlow 3s infinite alternate;
+        }
+
+        @keyframes borderGlow {
+            0% { opacity: 0.3; }
+            100% { opacity: 0.8; }
+        }
+
+        input[type="tel"] {
+            width: 100%;
+            padding: 15px;
+            background: #000;
+            border: 1px solid var(--border-color);
+            color: var(--accent-cyan);
+            font-size: 1.1rem;
+            margin: 20px 0;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        button {
+            background: var(--accent-cyan);
+            color: #000;
+            border: none;
+            padding: 12px 25px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            width: 100%;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #fff;
+            box-shadow: 0 0 15px var(--accent-cyan);
+        }
+
+        /* Loading Overlay */
+        #loading-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 50;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loader {
+            border: 4px solid #333;
+            border-top: 4px solid var(--accent-cyan);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Dashboard Grid */
+        #dashboard {
+            display: none;
+            padding: 20px;
+            height: 100%;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .target-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            position: relative;
+        }
+
+        .card h3 {
+            font-size: 0.8rem;
+            color: #667;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .card .value {
+            font-size: 1.2rem;
+            color: var(--accent-cyan);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Location Map Simulation */
+        .map-container {
+            background: #000;
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--accent-cyan);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Creating a fake grid map with CSS */
+        .grid-map {
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            position: relative;
+        }
+
+        .radar-sweep {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 300px; height: 300px;
+            background: conic-gradient(from 0deg, transparent 0deg, rgba(0, 243, 255, 0.4) 60deg, transparent 60deg);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: radarSpin 4s linear infinite;
+        }
+
+        @keyframes radarSpin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .target-dot {
+            position: absolute;
+            top: 40%; left: 60%;
+            width: 10px; height: 10px;
+            background: var(--accent-red);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-red);
+        }
+
+        .target-dot::after {
+            content: "TARGET LOCATED";
+            position: absolute;
+            top: -20px; left: -40px;
+            background: var(--accent-red);
+            color: #fff;
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            white-space: nowrap;
+        }
+
+        /* Lists (Call History) */
+        .list-container {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .list-item {
+            padding: 10px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .list-item span.outgoing { color: var(--accent-green); }
+        .list-item span.incoming { color: var(--accent-cyan); }
+
+        /* Usage Stats */
+        .stat-bar-container {
+            margin-bottom: 15px;
+        }
+        .stat-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+        .stat-track {
+            background: #222;
+            height: 8px;
+            width: 100%;
+        }
+        .stat-fill {
+            height: 100%;
+            background: var(--accent-cyan);
+            width: 0%;
+            transition: width 1s ease-out;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">OMNI-VIEW SYSTEM</div>
+        <div class="status" id="sys-status">OFFLINE</div>
+    </header>
+
+    <!-- Login / Input Screen -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2 style="color:var(--accent-cyan); margin-bottom:10px;">TARGET ACCESS</h2>
+            <p style="font-size:0.7rem; color:#888;">ENTER PHONE NUMBER TO RETRIEVE DATA</p>
+            <input type="tel" id="target-phone" placeholder="+91 XXXXX XXXXX">
+            <button onclick="initiateHack()">CONNECT TO DATABASE</button>
+            <p id="error-msg" style="color:var(--accent-red); font-size:0.7rem; margin-top:10px; display:none;">Invalid Format</p>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <p style="color:var(--accent-cyan);" id="loading-text">DECRYPTING...</p>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard">
+        
+        <!-- Top Info Cards -->
+        <div class="target-info">
+            <div class="card">
+                <h3>Target Number</h3>
+                <div class="value" id="display-phone">--</div>
+            </div>
+            <div class="card">
+                <h3>Current Status</h3>
+                <div class="value" style="color:var(--accent-green)">ONLINE</div>
+            </div>
+            <div class="card">
+                <h3>Last Location</h3>
+                <div class="value" id="last-loc">Locating...</div>
+            </div>
+            <div class="card">
+                <h3>Device Battery</h3>
+                <div class="value" id="battery-val">--%</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Left Column: Location & History -->
+            <div style="display:flex; flex-direction:column; gap:20px;">
+                <div class="card">
+                    <h3>Live Tracking (GPS)</h3>
+                    <div class="map-container">
+                        <div class="grid-map"></div>
+                        <div class="radar-sweep"></div>
+                        <div class="target-dot"></div>
+                    </div>
+                    <div style="margin-top:10px; font-size:0.8rem; color:#888;">
+                        LAT: 28.6139 N <br> LNG: 77.2090 E
+                    </div>
+                </div>
+
+                <div class="card" style="flex:1;">
+                    <h3>Recent Call Logs</h3>
+                    <div class="list-container" id="call-logs">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Usage Stats -->
+            <div class="card">
+                <h3>App Usage Analysis</h3>
+                <br>
+                
+                <div class="stat-bar-container">
+                    <div class="stat-label"><span>WhatsApp</span><span>4h 30m</span></div>
+                    <div class="stat-track"><div class="stat-fill" style="width: 85%"></div></div>
+                </div>
+
+                <div class="stat-bar-container">
+                    <div class="stat-label"><span>Instagram</span><span>2h 15m</span></div>
+                    <div class="stat-track"><div class="stat-fill" style="width: 60%; background:#C13584;"></div></div>
+                </div>
+
+                <div class="stat-bar-container">
+                    <div class="stat-label"><span>YouTube</span><span>1h 45m</span></div>
+                    <div class="stat-track"><div class="stat-fill" style="width: 40%; background:#ff0000;"></div></div>
+                </div>
+
+                <div class="stat-bar-container">
+                    <div class="stat-label"><span>Games</span><span>55m</span></div>
+                    <div class="stat-track"><div class="stat-fill" style="width: 25%; background:var(--accent-green);"></div></div>
+                </div>
+
+                <br>
+                <h3>Suspicious Activity</h3>
+                <div style="font-size:0.8rem; color:var(--accent-red); margin-top:5px;">
+                    > Unusual login detected at 03:00 AM<br>
+                    > Data transfer to unknown server (20MB)
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function initiateHack() {
+            const input = document.getElementById('target-phone').value;
+            const errorMsg = document.getElementById('error-msg');
+
+            if (input.length < 10) {
+                errorMsg.style.display = 'block';
+                return;
+            }
+            errorMsg.style.display = 'none';
+
+            // Show Loading
+            document.getElementById('loading-overlay').style.display = 'flex';
+            
+            // Simulate Data Fetching
+            const loadingText = document.getElementById('loading-text');
+            const texts = ["CONNECTING TO SATELLITE...", "BYPASSING ENCRYPTION...", "DOWNLOADING HISTORY...", "ANALYZING USAGE PATTERNS..."];
+            let step = 0;
+
+            const interval = setInterval(() => {
+                loadingText.innerText = texts[step];
+                step++;
+                if (step >= texts.length) clearInterval(interval);
+            }, 800);
+
+            setTimeout(() => {
+                // Hide Login and Loading, Show Dashboard
+                document.getElementById('login-screen').style.opacity = '0';
+                setTimeout(() => { document.getElementById('login-screen').style.display = 'none'; }, 1000);
+                
+                document.getElementById('loading-overlay').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'grid'; // Use grid layout
+                
+                // Update Status
+                document.getElementById('sys-status').innerText = "CONNECTED // MONITORING";
+                document.getElementById('sys-status').style.color = "var(--accent-green)";
+                document.getElementById('sys-status').style.borderColor = "var(--accent-green)";
+
+                // Populate Data
+                document.getElementById('display-phone').innerText = input;
+                document.getElementById('last-loc').innerText = "Connaught Place, New Delhi";
+                document.getElementById('battery-val').innerText = "84%";
+
+                generateFakeLogs();
+            }, 4000);
+        }
+
+        function generateFakeLogs() {
+            const logContainer = document.getElementById('call-logs');
+            const logs = [
+                { num: "+91 98765 43210", type: "incoming", time: "10:30 AM", dur: "5m 20s" },
+                { num: "+91 99887 76655", type: "outgoing", time: "09:15 AM", dur: "12m 45s" },
+                { num: "Unknown", type: "incoming", time: "Yesterday", dur: "2m 10s" },
+                { num: "+91 11223 34455", type: "outgoing", time: "Yesterday", dur: "1h 05m" },
+                { num: "Customer Care", type: "incoming", time: "2 days ago", dur: "8m 30s" }
+            ];
+
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `
+                    <div>
+                        <strong>${log.num}</strong><br>
+                        <span style="color:#666; font-size:0.7rem">${log.time}</span>
+                    </div>
+                    <div style="text-align:right">
+                        <span class="${log.type}">${log.type.toUpperCase()}</span><br>
+                        <span style="color:#fff">${log.dur}</span>
+                    </div>
+                `;
+                logContainer.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
