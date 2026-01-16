@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NET-TRACER // LOST DEVICE RECOVERY</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --panel-bg: #111;
+            --text: #ddd;
+            --highlight: #00ffcc; /* Cyan/Green */
+            --alert: #ff3333;
+            --grid: rgba(0, 255, 204, 0.1);
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* UI Structure */
+        header {
+            background: #1a1a1a;
+            padding: 15px;
+            border-bottom: 1px solid var(--highlight);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { margin: 0; font-size: 1.2rem; color: var(--highlight); text-transform: uppercase; letter-spacing: 2px; }
+
+        main {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+
+        /* Input Sidebar */
+        .sidebar {
+            width: 300px;
+            background: var(--panel-bg);
+            border-right: 1px solid #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: #000;
+            border: 1px solid #444;
+            color: var(--highlight);
+            font-family: monospace;
+        }
+
+        button#track-btn {
+            background: var(--highlight);
+            color: #000;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+
+        button#track-btn:hover { box-shadow: 0 0 10px var(--highlight); }
+        button:disabled { background: #555; cursor: not-allowed; }
+
+        .log-area {
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #888;
+            height: 200px;
+            overflow-y: auto;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+        }
+
+        /* Map / Visualization Area */
+        .visualizer {
+            flex: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Fake Radar Grid */
+        .radar-grid {
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background-image: 
+                radial-gradient(circle, var(--highlight) 1px, transparent 1px),
+                linear-gradient(var(--grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+            background-size: 40px 40px, 100px 100px, 100px 100px;
+            opacity: 0.3;
+            animation: rotateGrid 60s linear infinite;
+        }
+
+        @keyframes rotateGrid { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Triangulation Lines */
+        .tower {
+            position: absolute;
+            width: 10px; height: 10px;
+            background: var(--highlight);
+            border-radius: 50%;
+        }
+        
+        .tower-label {
+            position: absolute;
+            color: var(--highlight);
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        /* The Triangle */
+        #triangle-svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        /* Result Overlay */
+        .result-overlay {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--highlight);
+            padding: 15px;
+            max-width: 300px;
+            display: none;
+            backdrop-filter: blur(5px);
+        }
+
+        .result-overlay h3 { margin: 0 0 10px 0; color: var(--highlight); font-size: 1rem; }
+        .data-point { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem; }
+        .val { color: #fff; font-weight: bold; }
+        .val-red { color: var(--alert); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Device Recovery System <span style="font-size:0.7rem; color:#666;">v4.0.1</span></h1>
+        <div style="font-size:0.8rem;">STATUS: <span id="sys-status">IDLE</span></div>
+    </header>
+
+    <main>
+        <div class="sidebar">
+            <label style="font-size:0.8rem; color:#888;">TARGET DEVICE ID / PHONE</label>
+            <input type="text" id="device-id" placeholder="+91 XXXXX XXXXX">
+            
+            <button id="track-btn" onclick="startRecoverySequence()">INITIATE RECOVERY</button>
+
+            <div class="log-area" id="console-logs">
+                > System Ready...<br>
+                > Waiting for input...
+            </div>
+        </div>
+
+        <div class="visualizer">
+            <div class="radar-grid"></div>
+            
+            <!-- Fake Towers -->
+            <div class="tower" style="top: 20%; left: 30%;">
+                <div class="tower-label" style="top: -20px; left: -20px;">TOWER A</div>
+            </div>
+            <div class="tower" style="top: 25%; right: 20%;">
+                <div class="tower-label" style="top: -20px; left: -20px;">TOWER B</div>
+            </div>
+            <div class="tower" style="bottom: 30%; left: 50%;">
+                <div class="tower-label" style="top: -20px; left: -20px;">TOWER C</div>
+            </div>
+
+            <svg id="triangle-svg">
+                <polygon points="" fill="rgba(0, 255, 204, 0.1)" stroke="#00ffcc" stroke-width="2" />
+                <circle id="target-dot" cx="0" cy="0" r="8" fill="#ff3333" style="display:none;">
+                    <animate attributeName="r" values="8;15;8" dur="1s" repeatCount="indefinite" />
+                </circle>
+            </svg>
+
+            <div class="result-overlay" id="result-box">
+                <h3>DEVICE LOCATED</h3>
+                <div class="data-point"><span>Address:</span> <span class="val" id="res-addr">--</span></div>
+                <div class="data-point"><span>Accuracy:</span> <span class="val">15 Meters</span></div>
+                <div class="data-point"><span>Battery:</span> <span class="val-red" id="res-batt">--</span></div>
+                <div class="data-point"><span>Status:</span> <span class="val">MOVING</span></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const consoleLogs = document.getElementById('console-logs');
+        const btn = document.getElementById('track-btn');
+        const svg = document.getElementById('triangle-svg');
+        const sysStatus = document.getElementById('sys-status');
+        const resultBox = document.getElementById('result-box');
+
+        function log(msg) {
+            consoleLogs.innerHTML += `> ${msg}<br>`;
+            consoleLogs.scrollTop = consoleLogs.scrollHeight;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function startRecoverySequence() {
+            const deviceId = document.getElementById('device-id').value;
+            if (!deviceId) {
+                alert("Please enter a Device ID or Phone Number");
+                return;
+            }
+
+            // Reset UI
+            btn.disabled = true;
+            btn.innerText = "PROCESSING...";
+            svg.style.opacity = '0';
+            resultBox.style.display = 'none';
+            log("Initializing search for: " + deviceId);
+            sysStatus.innerText = "SCANNING NETWORK";
+            sysStatus.style.color = "yellow";
+
+            // Step 1: Connect to Towers (Simulation)
+            await sleep(1000);
+            log("Pinging Cell Tower Alpha...");
+            await sleep(800);
+            log("Pinging Cell Tower Beta...");
+            await sleep(800);
+            log("Pinging Cell Tower Gamma...");
+            log("Signal Triangulation Started...");
+
+            // Step 2: Calculate Location (Random for Demo)
+            await sleep(1500);
+            
+            // Generate random coordinates within the visual box
+            // Center is roughly 50%, 50%. Random offset.
+            const x = 40 + Math.random() * 20; // between 40% and 60%
+            const y = 40 + Math.random() * 20; // between 40% and 60%
+            
+            // Convert % to SVG coordinates roughly
+            const width = document.querySelector('.visualizer').offsetWidth;
+            const height = document.querySelector('.visualizer').offsetHeight;
+            
+            const pointX = (x / 100) * width;
+            const pointY = (y / 100) * height;
+
+            // Tower positions (Approximate based on CSS)
+            const tower1 = { x: width * 0.3, y: height * 0.2 };
+            const tower2 = { x: width * 0.8, y: height * 0.25 };
+            const tower3 = { x: width * 0.5, y: height * 0.7 };
+
+            // Draw Triangle
+            const poly = svg.querySelector('polygon');
+            poly.setAttribute("points", `${tower1.x},${tower1.y} ${tower2.x},${tower2.y} ${tower3.x},${tower3.y}`);
+            svg.style.opacity = '1';
+
+            await sleep(1000);
+
+            // Show Target Dot
+            const dot = document.getElementById('target-dot');
+            dot.setAttribute("cx", pointX);
+            dot.setAttribute("cy", pointY);
+            dot.style.display = 'block';
+
+            log("Intersection calculated.");
+            log("GPS Coordinates locked.");
+
+            // Step 3: Show Result
+            await sleep(1000);
+            sysStatus.innerText = "TARGET FOUND";
+            sysStatus.style.color = "#00ffcc";
+
+            // Generate Fake Address Data
+            const streets = ["Sector 18", "Main Market Rd", "MG Road", "Park Avenue", "Tech City"];
+            const areas = ["Noida", "Delhi", "Gurgaon", "Mumbai", "Bangalore"];
+            const randAddr = `${Math.floor(Math.random()*500)}, ${streets[Math.floor(Math.random()*streets.length)]}, ${areas[Math.floor(Math.random()*areas.length)]}`;
+            
+            document.getElementById('res-addr').innerText = randAddr;
+            document.getElementById('res-batt').innerText = Math.floor(Math.random() * 100) + "%";
+            
+            resultBox.style.display = 'block';
+            
+            btn.disabled = false;
+            btn.innerText = "INITIATE RECOVERY";
+            log("Search complete. Ready for next query.");
+        }
+    </script>
+</body>
+</html>
