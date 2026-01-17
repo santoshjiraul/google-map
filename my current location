@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Current Location</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 300px;
+        }
+        h2 {
+            color: #333;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Find My Location</h2>
+        <p>Apni current location dekhne ke liye button dabayein.</p>
+        <button onclick="getLocation()">Get Location</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function getLocation() {
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "Location fetch ho rahi hai...";
+
+            // Browser check karein ki kya Geolocation support karta hai
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                resultDiv.innerHTML = "<span class='error'>Aapka browser Geolocation support nahi karta.</span>";
+            }
+        }
+
+        function showPosition(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+
+            // Google Maps link banana
+            const mapLink = `https://www.google.com/maps?q=${lat},${lng}`;
+
+            document.getElementById("result").innerHTML = `
+                <div class='success'>
+                    <p><strong>Latitude:</strong> ${lat}</p>
+                    <p><strong>Longitude:</strong> ${lng}</p>
+                    <p><strong>Accuracy:</strong> ${accuracy} meters</p>
+                    <br>
+                    <a href="${mapLink}" target="_blank">Google Maps par dekhein</a>
+                </div>
+            `;
+        }
+
+        function showError(error) {
+            const resultDiv = document.getElementById("result");
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    resultDiv.innerHTML = "<span class='error'>User ne location deny kar di hai.</span>";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    resultDiv.innerHTML = "<span class='error'>Location information available nahi hai.</span>";
+                    break;
+                case error.TIMEOUT:
+                    resultDiv.innerHTML = "<span class='error'>Location fetch karne mein time out ho gaya.</span>";
+                    break;
+                default:
+                    resultDiv.innerHTML = "<span class='error'>Koi unknown error aa gaya.</span>";
+            }
+        }
+    </script>
+
+</body>
+</html>
