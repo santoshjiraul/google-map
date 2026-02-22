@@ -1,0 +1,108 @@
+import 'dart:io';
+import 'dart:math';
+
+class Team {
+  String name;
+  int matches = 0;
+  int wins = 0;
+  int losses = 0;
+  int ties = 0;
+  int points = 0;
+
+  Team(this.name);
+
+  void win() {
+    matches++;
+    wins++;
+    points += 2;
+  }
+
+  void lose() {
+    matches++;
+    losses++;
+  }
+
+  void tie() {
+    matches++;
+    ties++;
+    points += 1;
+  }
+
+  @override
+  String toString() {
+    return "$name | M:$matches W:$wins L:$losses T:$ties P:$points";
+  }
+}
+
+class Tournament {
+  List<Team> teams = [];
+
+  void addTeam(String name) {
+    teams.add(Team(name));
+  }
+
+  void playLeagueMatches() {
+    print("\n🏏 League Matches Start\n");
+
+    for (int i = 0; i < teams.length; i++) {
+      for (int j = i + 1; j < teams.length; j++) {
+        playMatch(teams[i], teams[j]);
+      }
+    }
+  }
+
+  void playMatch(Team team1, Team team2) {
+    print("Match: ${team1.name} vs ${team2.name}");
+    print("Enter winner name or 'tie': ");
+    String? result = stdin.readLineSync();
+
+    if (result == team1.name) {
+      team1.win();
+      team2.lose();
+    } else if (result == team2.name) {
+      team2.win();
+      team1.lose();
+    } else {
+      team1.tie();
+      team2.tie();
+    }
+  }
+
+  void showPointsTable() {
+    teams.sort((a, b) => b.points.compareTo(a.points));
+    print("\n📊 Points Table");
+    print("----------------------------");
+    for (var team in teams) {
+      print(team);
+    }
+  }
+
+  void playFinal() {
+    teams.sort((a, b) => b.points.compareTo(a.points));
+    Team team1 = teams[0];
+    Team team2 = teams[1];
+
+    print("\n🏆 FINAL MATCH: ${team1.name} vs ${team2.name}");
+    print("Enter Final Winner Name: ");
+    String? winner = stdin.readLineSync();
+
+    print("\n🎉 TOURNAMENT WINNER: $winner 🎉");
+  }
+}
+
+void main() {
+  Tournament tournament = Tournament();
+
+  print("Enter number of teams:");
+  int teamCount = int.parse(stdin.readLineSync()!);
+
+  for (int i = 0; i < teamCount; i++) {
+    print("Enter team ${i + 1} name:");
+    String name = stdin.readLineSync()!;
+    tournament.addTeam(name);
+  }
+
+  tournament.playLeagueMatches();
+  tournament.showPointsTable();
+  tournament.playFinal();
+}
